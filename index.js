@@ -13,21 +13,19 @@ class ServerlessHttpDownload {
     constructor(serverless, options) {
         this.serverless = serverless;
         this.options = options || {};
-
         this.commands = {
             httpDownload: {
-              usage: 'Download file(s) from HTTP',
-              lifecycleEvents: [
-                'download'
-              ]
+                usage: 'Download file(s) from HTTP',
+                lifecycleEvents: [
+                    'download'
+                ]
             }
-          };
-
+        };
         this.hooks = {
             'before:deploy:deploy': () => bb.bind(this).then(this.download),
+            'before:remove:remove': () => bb.bind(this).then(this.delete),
             'httpDownload:download': () => bb.bind(this).then(this.download)
         };
-
     }
 
     download() {
@@ -82,7 +80,7 @@ class ServerlessHttpDownload {
                 });
                 function downloadComplete() {
                     cli.printDot();
-                    resolve('Done')
+                    resolve('Done');
                 }
             });
         });
@@ -94,6 +92,48 @@ class ServerlessHttpDownload {
         });    
     }
 
+    delete() {
+        const cli = this.serverless.cli;
+        const httpDownloads = this.serverless.service.custom.http.downloads;
+        cli.consoleLog(httpDownloads)
+        if (!Array.isArray(httpDownloads)) {
+            cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
+            return Promise.resolve();
+        }
+        cli.consoleLog(`${messagePrefix}${chalk.yellow('Removing Locally Downloaded Files.')}`);
+        const promises = httpDownloads.map((s) => {
+            let localPath = null;
+            if (s.hasOwnProperty('localPath')) {
+                localPath = s.localPath;
+            }
+            let localFileName = null;
+            if (s.hasOwnProperty('localFileName')) {
+                localFileName = s.localFileName;
+            }
+            if (localPath === null || localFileName === null) {
+                return Promise.resolve();
+            }
+            return new Promise((resolve) => {
+                var destFile = localPath + slash + localFileName
+                if (!fs.existsSync(destFile)){
+                    fs.unlink('path/file.txt', (err) => {
+                        if (err) throw err;
+                        fileDeleted();
+                    });
+                }
+                function fileDeleted() {
+                    cli.printDot();
+                    resolve('Done');
+                }
+            });
+        });
+        return Promise.all(promises)
+            .then(() => {
+            cli.printDot();
+            cli.consoleLog('');
+            cli.consoleLog(`${messagePrefix}${chalk.yellow('All Locally Downloaded Files Removed.')}`);
+        });
+    }
 }
 
 module.exports = ServerlessHttpDownload;
