@@ -1,6 +1,7 @@
 'use strict';
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const bb = require('bluebird');
 const chalk = require('chalk');
@@ -30,13 +31,14 @@ class ServerlessHttpDownload {
     }
 
     download() {
-        const httpDownloads = this.serverless.service.http.downloads;
-        cli.consoleLog(httpDownloads)
         const cli = this.serverless.cli;
+        const httpDownloads = this.serverless.service.custom.http.downloads;
+        cli.consoleLog(httpDownloads)
         if (!Array.isArray(httpDownloads)) {
             cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
             return Promise.resolve();
         }
+        cli.consoleLog(`${messagePrefix}${chalk.yellow('Starting File Downloads.')}`);
         const promises = httpDownloads.map((s) => {
             let httpUrl = null;
             if (s.hasOwnProperty('httpUrl')) {
@@ -53,26 +55,36 @@ class ServerlessHttpDownload {
             if (httpUrl === null || localPath === null || localFileName === null) {
                 return Promise.resolve();
             }
-            if (!fs.existsSync(localPath)){
-                fs.mkdirSync(localPath);
-            }
-            var destFile = localPath + localFileName
-            var file = fs.createWriteStream(destFile);
-            var request = http.get(httpUrl, function(response) {
-                response.pipe(file);
-                file.on('finish', function() {
-                    file.close(downloadComplete);
+            return new Promise((resolve) => {
+                if (!fs.existsSync(localPath)){
+                    fs.mkdirSync(localPath, { recursive: true });
+                }
+                var slash = '';
+                if (!localPath.endsWith("/") || !localPath.endsWith("\\")) {
+                    slash = '/';
+                }
+                var destFile = localPath + slash + localFileName
+                var file = fs.createWriteStream(destFile);
+                var client = http;
+                if (httpUrl.toUpperCase().startsWith("HTTPS")) {
+                    client = https;
+                }
+                var request = client.get(httpUrl, function(response) {
+                    response.pipe(file);
+                    file.on('finish', function() {
+                        file.close(downloadComplete);
+                    });
                 });
+                request.on('error', function(err) {
+                    fs.unlink(destFile);
+                    cli.consoleLog(`${messagePrefix}${chalk.red('Error downloading File: ' )}${httpUrl}`)
+                    throw new Error("Unable to download file.", err);
+                });
+                function downloadComplete() {
+                    cli.printDot();
+                    resolve('Done')
+                }
             });
-            request.on('error', function(err) {
-                fs.unlink(destFile);
-                cli.consoleLog(`${messagePrefix}${chalk.red('Error downloading File: ' )}${httpUrl}`)
-                throw new Error("Unable to download file.", err);
-            });
-            function downloadComplete() {
-                cli.printDot();
-                resolve('Done')
-            }
         });
         return Promise.all(promises)
             .then(() => {
