@@ -1,0 +1,31 @@
+{
+  "name": "serverless-http-download",
+  "version": "1.0.0",
+  "description": "Serverless plugin for downloading files via http",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antoned0/serverless-http-download.git"
+  },
+  "keywords": [
+    "serverless",
+    "http",
+    "download",
+    "httpget"
+  ],
+  "author": "Edward Anton",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/antoned0/serverless-http-download/issues"
+  },
+  "homepage": "https://github.com/antoned0/serverless-http-download#readme",
+  "dependencies": {
+    "bluebird": "^3.5.5",
+    "chalk": "^2.4.2",
+    "fs": "0.0.1-security",
+    "http": "0.0.0"
+  }
+}
