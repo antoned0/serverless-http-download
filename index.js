@@ -36,7 +36,7 @@ class ServerlessHttpDownload {
             cli.consoleLog(`${messagePrefix}${chalk.red('No configuration found')}`)
             return Promise.resolve();
         }
-        cli.consoleLog(`${messagePrefix}${chalk.yellow('Starting File Downloads.')}`);
+        cli.consoleLog(`${messagePrefix}${chalk.yellow('Starting File Download')}`);
         const promises = httpDownloads.map((s) => {
             let httpUrl = null;
             if (s.hasOwnProperty('httpUrl')) {
